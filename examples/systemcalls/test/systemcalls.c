@@ -74,16 +74,17 @@ bool do_exec(int count, ...)
 	
 	if(fs != 0) // parent
 	{	
-		pid_t wr = wait(&wstatus); // wait for the child process to terminate execution.
+		pid_t wr = waitpid(fs, &wstatus, 0); // wait for the child process to terminate execution.
 
 		if(wr == -1)
 		{
 			perror("wait failed: ");
 			return false;
 		}
-
+		
 		if(WIFEXITED(wstatus))
 		{
+			printf("return value of child process == %d", WEXITSTATUS(wstatus));
 			if(WEXITSTATUS(wstatus) == 0)
 				return true;
 			else
@@ -92,6 +93,12 @@ bool do_exec(int count, ...)
 				return false;
 			}
 		}
+
+		else
+		{
+			perror("Child process could not be executed: ");
+			return false;
+		}	
 	}
 		
 	else	// child
@@ -100,7 +107,7 @@ bool do_exec(int count, ...)
 		
 		// exec should never return if properly executed.
 		perror("An error has occured: ");
-		exit(-1);
+		exit(4);
 	}
     // this line is to avoid a compile warning before your implementation is complete
     // and may be removed
@@ -143,23 +150,15 @@ bool do_exec_redirect(const char *outputfile, int count, ...)
 	
 	if(fs != 0) // parent
 	{
-		pid_t wr = wait(&wstatus); // wait for the child process to terminate execution.
-		if(wr == -1)
-		{
-			perror("wait failed: ");
-			return false;
-		}
+		pid_t wr = waitpid(fs, &wstatus, 0); // wait for the child process to terminate execution.
+		if(wr == fs)
+			return true;
 
-		if(WIFEXITED(wstatus))
+		else
 		{
-			if(WEXITSTATUS(wstatus) == 0)
-				return true;
-			else
-			{
-				perror("Non-zero return value returned by child process: ");
-				return false;
-			}
-		}
+			perror("Child process could not be executed: ");
+			return false;
+		}	
 	}
 		
 	else	// child
@@ -168,15 +167,14 @@ bool do_exec_redirect(const char *outputfile, int count, ...)
 		if (dup2(fd, 1) < 0)
 		{ 
 			perror("dup2: ");
-			return 1; 
+			return false; 
 		}
 
     	close(fd);
 		execv(command[0], command);
 		
-		// exec should never return if properly executed.
 		perror("An error has occured: ");
-		exit(-1); // Non-zero return value for the child if exec returns. 
+		exit(4);
 	}
     // this line is to avoid a compile warning before your implementation is complete
     // and may be removed
